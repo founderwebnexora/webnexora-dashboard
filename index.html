@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webnexora — Business Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --ink:#FFFFFF;
+    --ink-soft:#F1F5FB;
+    --canvas:#F6F8FB;
+    --surface:#FFFFFF;
+    --line:#E2E8F2;
+    --line-soft:#EDF1F7;
+    --text-primary:#1B2532;
+    --text-secondary:#5E6B7D;
+    --text-muted:#8E99AA;
+    --text-on-ink:#1B2532;
+    --text-on-ink-soft:#6B7A90;
+
+    --teal:#2F6FED;      /* brand blue — confirmed / positive / primary */
+    --teal-hover:#2557C4;
+    --teal-bg:#E7EFFD;
+    --amber:#B3792A;     /* pending / attention */
+    --amber-bg:#F5ECDC;
+    --red:#C0362E;       /* no-show / cancelled */
+    --red-bg:#FBE9E7;
+    --slate:#5A6B80;     /* new / neutral */
+    --slate-bg:#EAEEF4;
+
+    --radius:10px;
+    --radius-sm:6px;
+    --shadow-card:0 1px 2px rgba(16,24,38,0.06), 0 1px 1px rgba(16,24,38,0.04);
+    --shadow-pop:0 12px 40px rgba(16,24,38,0.18);
+
+    --font-display:'Space Grotesk', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:var(--font-body);
+    background:var(--canvas);
+    color:var(--text-primary);
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+  a{color:inherit;}
+  ::selection{background:var(--teal);color:#fff;}
+  :focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ============ LOGIN ============ */
+  #loginScreen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      radial-gradient(circle at 15% 10%, #EAF0FC 0%, transparent 50%),
+      var(--canvas);
+    padding:24px;
+  }
+  .login-card{
+    width:100%;
+    max-width:380px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    box-shadow:0 1px 3px rgba(27,37,50,0.05), 0 8px 28px rgba(27,37,50,0.06);
+    border-radius:16px;
+    padding:36px 32px;
+  }
+  .login-brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:28px;
+  }
+  .login-brand .mark{
+    width:32px;height:32px;border-radius:8px;
+    background:var(--teal);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-weight:600;font-size:13px;color:#fff;
+    flex-shrink:0;
+  }
+  .login-brand .word{
+    font-family:var(--font-display);font-weight:600;font-size:16px;
+    color:var(--text-on-ink);letter-spacing:0.01em;
+  }
+  .login-card h1{
+    font-family:var(--font-display);
+    font-size:22px;font-weight:600;
+    color:var(--text-on-ink);
+    margin:0 0 6px;
+  }
+  .login-card p.sub{
+    font-size:13px;color:var(--text-on-ink-soft);margin:0 0 26px;
+  }
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;font-size:12px;font-weight:500;
+    color:var(--text-on-ink-soft);margin-bottom:6px;
+    text-transform:uppercase;letter-spacing:0.04em;
+  }
+  .field input{
+    width:100%;padding:11px 13px;
+    background:var(--canvas);
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    color:var(--text-primary);font-size:14px;
+    transition:border-color .15s, background .15s;
+  }
+  .field input:focus{border-color:var(--teal);background:var(--surface);}
+  .field input::placeholder{color:var(--text-muted);}
+  .btn-primary{
+    width:100%;padding:12px;
+    background:var(--teal);color:#fff;border:none;
+    border-radius:var(--radius-sm);
+    font-size:14px;font-weight:600;
+    margin-top:6px;
+    transition:background .15s, transform .1s;
+  }
+  .btn-primary:hover{background:var(--teal-hover);}
+  .btn-primary:active{transform:scale(0.98);}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+  .login-error{
+    background:var(--red-bg);
+    border:1px solid rgba(192,54,46,0.25);
+    color:var(--red);
+    font-size:13px;padding:10px 12px;border-radius:var(--radius-sm);
+    margin-bottom:16px;display:none;
+  }
+  .login-hint{
+    margin-top:20px;font-size:12px;color:var(--text-on-ink-soft);
+    text-align:center;
+  }
+
+  /* ============ APP SHELL ============ */
+  #app{display:none;min-height:100vh;}
+  .shell{display:flex;min-height:100vh;}
+
+  .sidebar{
+    width:236px;flex-shrink:0;
+    background:var(--ink);
+    color:var(--text-on-ink);
+    border-right:1px solid var(--line);
+    display:flex;flex-direction:column;
+    padding:20px 14px;
+    position:sticky;top:0;height:100vh;
+  }
+  .side-brand{display:flex;align-items:center;gap:10px;padding:6px 8px 22px;}
+  .side-brand .mark{
+    width:28px;height:28px;border-radius:7px;background:var(--teal);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-weight:600;font-size:11px;color:#fff;flex-shrink:0;
+  }
+  .side-brand .word{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:0.01em;}
+
+  .biz-card{
+    background:var(--ink-soft);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:13px 14px;margin-bottom:20px;
+  }
+  .biz-card .biz-name{font-family:var(--font-display);font-weight:600;font-size:14px;line-height:1.3;color:var(--text-primary);}
+  .biz-card .biz-sector{font-size:11px;color:var(--text-on-ink-soft);margin-top:3px;text-transform:capitalize;}
+
+  .nav-label{
+    font-size:10px;font-weight:600;color:var(--text-muted);
+    text-transform:uppercase;letter-spacing:0.08em;
+    padding:0 10px;margin-bottom:8px;
+  }
+  .nav-tabs{display:flex;flex-direction:column;gap:2px;margin-bottom:auto;}
+  .nav-tab{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;border-radius:var(--radius-sm);
+    background:none;border:none;color:var(--text-on-ink-soft);
+    font-size:13.5px;font-weight:500;text-align:left;width:100%;
+    transition:background .12s, color .12s;
+  }
+  .nav-tab .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0.5;flex-shrink:0;}
+  .nav-tab:hover{background:var(--ink-soft);color:var(--text-on-ink);}
+  .nav-tab.active{background:var(--teal-bg);color:var(--teal);}
+  .nav-tab.active .dot{background:var(--teal);opacity:1;}
+
+  .side-footer{padding-top:16px;border-top:1px solid var(--line);}
+  .staff-row{display:flex;align-items:center;gap:9px;padding:6px 8px;margin-bottom:6px;}
+  .staff-avatar{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--teal);display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:10px;font-weight:600;color:#fff;flex-shrink:0;
+  }
+  .staff-meta .name{font-size:12.5px;font-weight:500;line-height:1.2;color:var(--text-primary);}
+  .staff-meta .role{font-size:10.5px;color:var(--text-on-ink-soft);text-transform:capitalize;}
+  .btn-logout{
+    width:100%;padding:8px 10px;background:none;
+    border:1px solid var(--line);border-radius:var(--radius-sm);
+    color:var(--text-on-ink-soft);font-size:12px;font-weight:500;
+    transition:border-color .15s, color .15s;
+  }
+  .btn-logout:hover{border-color:var(--text-muted);color:var(--text-primary);}
+
+  /* ============ MAIN ============ */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:18px 28px;border-bottom:1px solid var(--line);
+    background:var(--surface);position:sticky;top:0;z-index:5;flex-wrap:wrap;
+  }
+  .topbar h2{font-family:var(--font-display);font-size:19px;font-weight:600;margin:0;}
+  .topbar .sub{font-size:12.5px;color:var(--text-secondary);margin-top:2px;}
+  .search-box{
+    display:flex;align-items:center;gap:7px;
+    background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:8px 12px;min-width:220px;
+  }
+  .search-box input{border:none;background:none;font-size:13px;width:100%;color:var(--text-primary);}
+  .search-box input:focus{outline:none;}
+  .search-box svg{flex-shrink:0;opacity:0.5;}
+
+  .filter-row{display:flex;gap:8px;padding:14px 28px;flex-wrap:wrap;border-bottom:1px solid var(--line-soft);background:var(--surface);}
+  .chip{
+    padding:6px 13px;border-radius:100px;border:1px solid var(--line);
+    background:var(--canvas);font-size:12.5px;font-weight:500;color:var(--text-secondary);
+    transition:all .12s;
+  }
+  .chip:hover{border-color:var(--text-muted);}
+  .chip.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+  .content{flex:1;padding:22px 28px 60px;overflow-y:auto;}
+  .empty-state{
+    text-align:center;padding:70px 20px;color:var(--text-muted);
+  }
+  .empty-state .glyph{font-family:var(--font-mono);font-size:28px;margin-bottom:10px;opacity:0.4;}
+  .empty-state p{font-size:13.5px;margin:0;}
+
+  /* ============ STATUS STAMP ============ */
+  .stamp{
+    display:inline-flex;align-items:center;gap:5px;
+    font-family:var(--font-mono);font-size:10px;font-weight:600;
+    text-transform:uppercase;letter-spacing:0.04em;
+    padding:4px 9px 4px 7px;border-radius:4px;
+    color:#fff;white-space:nowrap;
+  }
+  .stamp::before{
+    content:'';width:6px;height:6px;border-radius:50%;
+    background:#fff;opacity:0.85;flex-shrink:0;
+  }
+  .stamp.s-new, .stamp.s-pending{background:var(--amber);}
+  .stamp.s-contacted, .stamp.s-confirmed{background:var(--teal);}
+  .stamp.s-completed{background:var(--slate);}
+  .stamp.s-closed{background:var(--slate);}
+  .stamp.s-no_show, .stamp.s-cancelled{background:var(--red);}
+  .stamp.s-rescheduled{background:var(--amber);}
+  .badge-flag{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:10.5px;font-weight:600;color:var(--red);
+    background:var(--red-bg);padding:3px 8px;border-radius:4px;
+  }
+
+  /* ============ CONTACTS: gmail style ============ */
+  .contacts-layout{display:grid;grid-template-columns:1fr;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .contact-row{
+    display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:14px;
+    padding:14px 18px;border-bottom:1px solid var(--line-soft);
+    background:var(--surface);transition:background .1s;cursor:pointer;
+  }
+  .contact-row:last-child{border-bottom:none;}
+  .contact-row:hover{background:var(--canvas);}
+  .contact-row .avatar{
+    width:34px;height:34px;border-radius:50%;background:var(--slate-bg);color:var(--slate);
+    display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);
+    font-weight:600;font-size:12px;flex-shrink:0;
+  }
+  .contact-row .who .cname{font-size:13.5px;font-weight:600;}
+  .contact-row .who .cmsg{font-size:12.5px;color:var(--text-secondary);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:520px;}
+  .contact-row .cphone{font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);white-space:nowrap;}
+  .contact-row .ctime{font-size:11.5px;color:var(--text-muted);white-space:nowrap;}
+
+  /* slide-over */
+  .overlay{
+    position:fixed;inset:0;background:rgba(16,24,38,0.35);
+    display:none;z-index:20;
+  }
+  .overlay.open{display:block;}
+  .slideover{
+    position:fixed;top:0;right:0;height:100vh;width:420px;max-width:92vw;
+    background:var(--surface);box-shadow:var(--shadow-pop);
+    transform:translateX(100%);transition:transform .22s ease;
+    z-index:21;display:flex;flex-direction:column;
+  }
+  .slideover.open{transform:translateX(0);}
+  .slideover-head{padding:20px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;}
+  .slideover-head h3{font-family:var(--font-display);font-size:17px;margin:0 0 4px;}
+  .slideover-head .phone-link{font-family:var(--font-mono);font-size:13px;color:var(--teal);text-decoration:none;}
+  .btn-close{background:none;border:none;font-size:18px;color:var(--text-muted);padding:4px;line-height:1;}
+  .slideover-body{padding:20px 22px;flex:1;overflow-y:auto;}
+  .detail-block{margin-bottom:20px;}
+  .detail-block .k{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;font-weight:600;}
+  .detail-block .v{font-size:14px;color:var(--text-primary);line-height:1.5;}
+  .quick-actions{display:flex;gap:8px;padding:16px 22px;border-top:1px solid var(--line);flex-wrap:wrap;}
+  .btn-chip{
+    padding:8px 13px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--surface);font-size:12.5px;font-weight:500;
+    transition:all .12s;
+  }
+  .btn-chip:hover{border-color:var(--text-secondary);}
+  .btn-chip.on{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+  /* ============ RESERVATIONS: day groups + cards ============ */
+  .day-group{margin-bottom:26px;}
+  .day-heading{
+    font-family:var(--font-display);font-size:13.5px;font-weight:600;
+    color:var(--text-secondary);margin-bottom:10px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .day-heading .count{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);font-weight:500;}
+
+  .booking-list{display:flex;flex-direction:column;gap:8px;}
+  .booking-card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:13px 16px;display:grid;grid-template-columns:70px 1fr auto auto auto;align-items:center;gap:14px;
+    cursor:pointer;transition:border-color .12s, box-shadow .12s;
+  }
+  .booking-card:hover{border-color:#C7CCC3;box-shadow:var(--shadow-card);}
+  .booking-card .time{font-family:var(--font-mono);font-weight:600;font-size:13.5px;}
+  .booking-card .info .cust{font-size:13.5px;font-weight:600;}
+  .booking-card .info .meta{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+  .booking-card .phone-link{font-family:var(--font-mono);font-size:11.5px;color:var(--teal);text-decoration:none;white-space:nowrap;}
+
+  @media (min-width:820px){
+    .booking-list.grid-desktop{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface);}
+    .grid-desktop .booking-card{border-radius:0;border:none;border-bottom:1px solid var(--line-soft);}
+    .grid-desktop .booking-card:last-child{border-bottom:none;}
+  }
+
+  /* ============ MODAL (edit / reschedule) ============ */
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(16,24,38,0.45);
+    display:none;align-items:center;justify-content:center;z-index:30;padding:20px;
+  }
+  .modal-backdrop.open{display:flex;}
+  .modal{
+    background:var(--surface);border-radius:14px;width:100%;max-width:400px;
+    padding:24px;box-shadow:var(--shadow-pop);
+  }
+  .modal h3{font-family:var(--font-display);font-size:16.5px;margin:0 0 4px;}
+  .modal .modal-sub{font-size:12.5px;color:var(--text-secondary);margin:0 0 18px;}
+  .modal .field label{
+    display:block;font-size:11px;font-weight:600;color:var(--text-secondary);
+    text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;
+  }
+  .modal .field{margin-bottom:14px;}
+  .modal .field input, .modal .field select{
+    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius-sm);
+    font-size:13.5px;background:var(--canvas);
+  }
+  .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .modal-actions{display:flex;gap:9px;margin-top:18px;}
+  .btn-secondary{
+    flex:1;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--surface);font-size:13px;font-weight:600;color:var(--text-secondary);
+  }
+  .btn-confirm{
+    flex:1;padding:10px;border-radius:var(--radius-sm);border:none;
+    background:var(--teal);color:#fff;font-size:13px;font-weight:600;
+  }
+  .btn-confirm:hover{background:var(--teal-hover);}
+
+  /* ---- dynamic booking form: slot grid + duration tiers ---- */
+  .bf-slots{display:flex;flex-wrap:wrap;gap:6px;max-height:170px;overflow-y:auto;padding:2px;}
+  .bf-empty{font-size:12.5px;color:var(--text-muted);padding:5px 2px;}
+  .bf-slot-btn{
+    padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--surface);font-family:var(--font-mono);font-size:12px;font-weight:600;
+    color:var(--text-primary);transition:all .12s;
+  }
+  .bf-slot-btn:hover{border-color:var(--teal);color:var(--teal);}
+  .bf-slot-btn.bf-selected{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .bf-tiers{display:flex;flex-direction:column;gap:7px;}
+  .bf-tier-card{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 13px;border:1px solid var(--line);border-radius:var(--radius-sm);
+    background:var(--surface);cursor:pointer;transition:all .12s;
+  }
+  .bf-tier-card:hover{border-color:var(--teal);}
+  .bf-tier-card.bf-selected{background:var(--teal-bg);border-color:var(--teal);}
+  .bf-tier-card.bf-unavailable{opacity:0.5;cursor:not-allowed;background:var(--canvas);}
+  .bf-tier-label{font-size:13px;font-weight:600;}
+  .bf-tier-price{font-family:var(--font-mono);font-size:12.5px;font-weight:600;color:var(--text-secondary);}
+  .bf-availability{font-size:12.5px;margin:-6px 0 14px;min-height:16px;}
+  .bf-availability.bf-ok{color:var(--teal);}
+  .bf-availability.bf-not-ok{color:var(--red);}
+  .resource-single{
+    font-size:13.5px;font-weight:600;padding:9px 11px;background:var(--canvas);
+    border:1px solid var(--line);border-radius:var(--radius-sm);
+  }
+
+  /* ============ CATALOGUE ============ */
+  .catalogue-list{display:flex;flex-direction:column;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .catalogue-row{
+    display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:14px;
+    padding:13px 18px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:background .1s;
+  }
+  .catalogue-row:last-child{border-bottom:none;}
+  .catalogue-row:hover{background:var(--canvas);}
+  .catalogue-row .item-name{font-size:13.5px;font-weight:600;}
+  .catalogue-row .item-meta{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+  .catalogue-row .item-price{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;}
+  .inactive-tag{font-size:10px;font-weight:600;color:var(--text-muted);background:var(--slate-bg);padding:2px 7px;border-radius:4px;text-transform:uppercase;}
+
+  /* ============ METRICS ============ */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px;}
+  .stat-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;}
+  .stat-card .stat-label{font-size:11.5px;color:var(--text-secondary);font-weight:500;margin-bottom:6px;}
+  .stat-card .stat-value{font-family:var(--font-display);font-size:24px;font-weight:600;color:var(--text-primary);}
+  .stat-card .stat-value.positive{color:var(--teal);}
+  .chart-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:22px;}
+  .chart-card h4{font-family:var(--font-display);font-size:14px;margin:0 0 14px;}
+
+  .field label input[type="checkbox"]{width:auto;}
+
+  /* ============ MOBILE ============ */
+  @media (max-width:820px){
+    .shell{flex-direction:column;}
+    .sidebar{
+      position:sticky;top:0;width:100%;height:auto;flex-direction:row;
+      align-items:center;padding:12px 16px;gap:12px;overflow-x:auto;z-index:10;
+    }
+    .side-brand{padding:0;flex-shrink:0;}
+    .biz-card{display:none;}
+    .nav-label{display:none;}
+    .nav-tabs{flex-direction:row;margin-bottom:0;flex-shrink:0;}
+    .nav-tab{white-space:nowrap;padding:8px 12px;}
+    .side-footer{border:none;padding:0;margin-left:auto;flex-shrink:0;}
+    .staff-row{display:none;}
+    .btn-logout{width:auto;padding:8px 12px;}
+    .topbar{padding:14px 16px;}
+    .filter-row{padding:12px 16px;}
+    .content{padding:16px 16px 50px;}
+    .contact-row{grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:6px 12px;}
+    .contact-row .cphone{grid-column:2;font-size:11.5px;}
+    .contact-row .ctime{display:none;}
+    .contact-row .who .cmsg{max-width:100%;}
+    .booking-card{grid-template-columns:56px 1fr;grid-template-rows:auto auto;row-gap:6px;}
+    .booking-card .phone-link{grid-column:2;justify-self:start;}
+    .slideover{width:100%;max-width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="mark">WX</div>
+      <div class="word">WEBNEXORA</div>
+    </div>
+    <h1>Business console</h1>
+    <p class="sub">Sign in to manage your contacts and reservations.</p>
+    <div class="login-error" id="loginError"></div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="you@business.com" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-primary" id="loginBtn">Sign in</button>
+    </form>
+    <p class="login-hint">Access is set up by Webnexora for each business. Contact your Webnexora rep if you need a login.</p>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="side-brand">
+        <div class="mark">WX</div>
+        <div class="word">WEBNEXORA</div>
+      </div>
+      <div class="biz-card">
+        <div class="biz-name" id="bizName">—</div>
+        <div class="biz-sector" id="bizSector">—</div>
+      </div>
+      <div class="nav-label">Workspace</div>
+      <nav class="nav-tabs" id="navTabs"></nav>
+      <div class="side-footer">
+        <div class="staff-row">
+          <div class="staff-avatar" id="staffInitial">—</div>
+          <div class="staff-meta">
+            <div class="name" id="staffName">—</div>
+            <div class="role" id="staffRole">—</div>
+          </div>
+        </div>
+        <button class="btn-logout" id="logoutBtn">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h2 id="viewTitle">Reservations</h2>
+          <div class="sub" id="viewSub">Loading…</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="search-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="searchInput" placeholder="Search name or phone…">
+          </div>
+          <button class="btn-confirm" id="newBookingBtn" style="display:none;flex:0 0 auto;white-space:nowrap;padding:10px 16px;">+ New reservation</button>
+        </div>
+      </div>
+      <div class="filter-row" id="filterRow"></div>
+      <div class="content" id="content"></div>
+    </main>
+  </div>
+</div>
+
+<!-- contact slide-over -->
+<div class="overlay" id="overlay"></div>
+<div class="slideover" id="slideover">
+  <div class="slideover-head">
+    <div>
+      <h3 id="soName">—</h3>
+      <a href="#" class="phone-link" id="soPhone">—</a>
+    </div>
+    <button class="btn-close" id="soClose">✕</button>
+  </div>
+  <div class="slideover-body" id="soBody"></div>
+  <div class="quick-actions" id="soActions"></div>
+</div>
+
+<!-- booking create/edit modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" style="max-width:460px;max-height:90vh;overflow-y:auto;">
+    <h3 id="modalTitle">Update reservation</h3>
+    <p class="modal-sub" id="modalSub">Phone-in / walk-in bookings can be added here too.</p>
+
+    <div class="modal-row">
+      <div class="field">
+        <label>Customer name</label>
+        <input type="text" id="editCustomerName" placeholder="Full name">
+      </div>
+      <div class="field">
+        <label>Phone <span style="color:var(--red);">*</span></label>
+        <input type="tel" id="editPhone" placeholder="Required">
+      </div>
+    </div>
+    <div class="field">
+      <label>Email <span id="emailReqMark" style="color:var(--red);display:none;">*</span></label>
+      <input type="email" id="editEmail" placeholder="Optional">
+    </div>
+
+    <div class="field" id="specializationField" style="display:none;">
+      <label>Specialization</label>
+      <select id="editSpecialization"><option value="">All</option></select>
+    </div>
+    <div class="field" id="resourceField">
+      <label id="resourceLabelText">Item</label>
+      <select id="editCatalogueItem"><option value="">— None —</option></select>
+      <div class="resource-single" id="resourceSingle" style="display:none;">—</div>
+    </div>
+
+    <div class="modal-row" id="startRow">
+      <div class="field" id="startDateField">
+        <label id="startDateLabel">Start date</label>
+        <input type="date" id="editStartDate">
+      </div>
+      <div class="field" id="startTimeField">
+        <label>Start time</label>
+        <input type="time" id="editStartTime">
+      </div>
+    </div>
+
+    <!-- form_type = 'slots' — server-generated slot grid -->
+    <div class="field" id="slotField" style="display:none;">
+      <label>Available times <span style="color:var(--red);">*</span></label>
+      <div class="bf-slots" id="slotGrid"></div>
+    </div>
+
+    <!-- form_type = 'duration_tiers' — fixed-length packages -->
+    <div class="field" id="tierField" style="display:none;">
+      <label>Duration <span style="color:var(--red);">*</span></label>
+      <div class="bf-tiers" id="tierGrid"></div>
+    </div>
+
+    <!-- form_type = 'range' — manual end date/time -->
+    <div class="modal-row" id="endRow">
+      <div class="field">
+        <label>End date</label>
+        <input type="date" id="editEndDate">
+      </div>
+      <div class="field">
+        <label>End time</label>
+        <input type="time" id="editEndTime">
+      </div>
+    </div>
+    <div class="bf-availability" id="availabilityNote"></div>
+
+    <div class="field" id="partySizeField">
+      <label>Party size</label>
+      <input type="number" id="editPartySize" min="1" placeholder="Optional">
+    </div>
+    <div class="field">
+      <label>Status</label>
+      <select id="editStatus">
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="completed">Completed</option>
+        <option value="no_show">No-show</option>
+        <option value="cancelled">Cancelled — customer notified us, record kept</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <input type="text" id="editNotes" placeholder="Optional — anything staff should know">
+    </div>
+
+    <div id="pricingBlock" style="display:none;background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;">
+      <div class="modal-row">
+        <div class="field" id="quantityField">
+          <label>Quantity</label>
+          <input type="number" id="editQuantity" min="1" value="1">
+        </div>
+        <div class="field">
+          <label>Amount</label>
+          <input type="number" id="editAmount" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+      <p style="font-size:11.5px;color:var(--text-secondary);margin:0 0 10px;">Estimated automatically from the item's pricing once you pick an item and both times — you can still override it.</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--line);margin-top:2px;">
+        <span style="font-size:12.5px;font-weight:600;color:var(--text-secondary);">Total</span>
+        <span id="finalAmountDisplay" style="font-family:var(--font-mono);font-size:16px;font-weight:600;">₹0.00</span>
+      </div>
+    </div>
+
+    <p id="modalError" style="display:none;color:var(--red);font-size:12.5px;margin:0 0 4px;"></p>
+    <p id="deleteHint" style="display:none;font-size:11.5px;color:var(--text-muted);margin:0 0 10px;">
+      Owner-only. Permanently erases this record — for a real customer, set status to <strong>Cancelled</strong> instead so it stays in your history.
+    </p>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" id="deleteBookingBtn" style="display:none;flex:0 0 auto;margin-right:auto;color:var(--red);border-color:var(--red-bg);">Delete</button>
+      <button class="btn-secondary" id="modalCancel">Cancel</button>
+      <button class="btn-confirm" id="modalSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- catalogue item add/edit modal -->
+<div class="modal-backdrop" id="catalogueModalBackdrop">
+  <div class="modal" style="max-width:420px;">
+    <h3 id="catModalTitle">New item</h3>
+    <p class="modal-sub" id="catModalLabel">Added to your catalogue.</p>
+
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="catName" placeholder="e.g. Swift Dzire 2021">
+    </div>
+    <div class="modal-row">
+      <div class="field">
+        <label>Category</label>
+        <input type="text" id="catCategory" placeholder="e.g. Sedan, Mains, Ortho">
+      </div>
+      <div class="field">
+        <label>Price</label>
+        <input type="number" id="catPrice" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <div class="field">
+      <label>Unit</label>
+      <input type="text" id="catUnit" placeholder="e.g. per day, per visit, per item">
+    </div>
+    <div class="field">
+      <label>Specializations <span style="text-transform:none;font-weight:400;color:var(--text-muted);">(comma-separated, optional — for doctors/providers)</span></label>
+      <input type="text" id="catSpecializations" placeholder="e.g. Bone replacement, Fracture care">
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:500;">
+        <input type="checkbox" id="catActive" checked style="width:auto;"> Active — visible when booking
+      </label>
+    </div>
+
+    <p id="catModalError" style="display:none;color:var(--red);font-size:12.5px;margin:0 0 4px;"></p>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" id="catDeleteBtn" style="display:none;flex:0 0 auto;margin-right:auto;color:var(--red);border-color:var(--red-bg);">Remove</button>
+      <button class="btn-secondary" id="catModalCancel">Cancel</button>
+      <button class="btn-confirm" id="catModalSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+/* ============================================================
+   CONFIG — swap nothing else, this file is shared across clients
+   ============================================================ */
+const SUPABASE_URL = 'https://jvkvxpdzrmnyabmfkofe.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2a3Z4cGR6cm1ueWFibWZrb2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMTA2MDgsImV4cCI6MjEwMjg4NjYwOH0.QzMFQbRHLu9Ok-D2QdGTbv_A4asgFdencKipQELyEb8';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ---------------------------------------------------------------
+   Booking API — mirrors supabase-booking-api.js, using the same
+   `sb` client this console already authenticates with. Kept as a
+   thin RPC wrapper so the public-facing booking form
+   (booking-form-builder.js) and this staff console call the exact
+   same server-side functions for anything price/availability
+   related — the source of truth never forks between the two UIs.
+   --------------------------------------------------------------- */
+const bookingApi = {
+  async getBookablePools(clientId, itemType = null) {
+    const { data, error } = await sb.rpc('get_client_bookable_pools', { p_client_id: clientId, p_item_type: itemType });
+    if (error) throw error;
+    return data;
+  },
+  async getFormConfig(itemId) {
+    const { data, error } = await sb.rpc('get_booking_form_config', { p_item_id: itemId });
+    if (error) throw error;
+    return data;
+  },
+  async getAvailableSlots(itemId, dateStr, quantity = 1) {
+    const { data, error } = await sb.rpc('get_available_slots', { p_item_id: itemId, p_date: dateStr, p_quantity: quantity });
+    if (error) throw error;
+    return data;
+  },
+  async checkRangeAvailability(itemId, startISO, endISO, quantity = 1) {
+    const { data, error } = await sb.rpc('check_range_availability', { p_item_id: itemId, p_starts_at: startISO, p_ends_at: endISO, p_quantity: quantity });
+    if (error) throw error;
+    return data;
+  },
+  async checkDurationTier(itemId, startISO, minutes, quantity = 1) {
+    const { data, error } = await sb.rpc('check_duration_tier', { p_item_id: itemId, p_starts_at: startISO, p_minutes: minutes, p_quantity: quantity });
+    if (error) throw error;
+    return data[0];
+  },
+  async calculatePrice(itemId, startISO, endISO, durationMinutes, quantity = 1) {
+    const { data, error } = await sb.rpc('calculate_booking_price', { p_item_id: itemId, p_starts_at: startISO, p_ends_at: endISO, p_duration_minutes: durationMinutes, p_quantity: quantity });
+    if (error) throw error;
+    return data;
+  },
+  async submitContact({ clientId, name, email, phone, message }) {
+    const { data, error } = await sb.rpc('submit_contact_request', { p_client_id: clientId, p_name: name, p_email: email, p_phone: phone, p_custom_fields: message ? { message } : {} });
+    if (error) throw error;
+    return data;
+  },
+  async submitBooking({ clientId, itemId, unitId, customerName, email, phone, startsAt, endsAt, partySize, quantity, status, customFields }) {
+    const { data, error } = await sb.rpc('submit_booking_request', {
+      p_client_id: clientId,
+      p_customer_name: customerName,
+      p_bookable_item_id: itemId,
+      p_starts_at: startsAt,
+      p_ends_at: endsAt,
+      p_customer_email: email || null,
+      p_customer_phone: phone,
+      p_assigned_unit_id: unitId || null,
+      p_status: status || 'pending',
+      p_custom_fields: customFields || {},
+      p_source: 'staff_console',
+      p_party_size: partySize ?? null,
+      p_quantity: quantity ?? 1,
+      p_amount: null,
+    });
+    if (error) throw error;
+    return data;
+  },
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let session = null;
+let staffMember = null;   // client_members row for the signed-in user
+let currentClient = null; // clients row (business_type, timezone, currency, business_config)
+let currentTab = 'reservations';
+let contacts = [];
+let bookings = [];
+let bookableItems = [];   // pool-level bookable_items for this client (the "catalogue")
+let contactFilter = 'all';
+let bookingFilter = 'all';
+let searchTerm = '';
+let activeContact = null;
+let editingSubmission = null;
+let editingCatalogueItemId = null;
+
+/* Booking form shape — driven entirely by clients.business_config.booking.
+   form_type: 'none' | 'slots' | 'range' | 'duration_tiers'
+   One business = one form. The item only decides *which* calendar we check,
+   never which fields render. */
+let formType = 'range';
+let askPartySize = false;
+let selectedSlot = null;  // { slot_start, slot_end } — set in 'slots' mode
+let selectedTier = null;  // { minutes, ends_at, price } — set in 'duration_tiers' mode
+
+const STATUS_LABELS = {
+  new:'New', contacted:'Answered', closed:'Closed',
+  pending:'Pending', confirmed:'Confirmed', completed:'Completed',
+  no_show:'No-show', cancelled:'Cancelled', rescheduled:'Rescheduled'
+};
+
+/* business_type drives dashboard language + resource label. Falls back to a
+   generic config for any business_type we don't have a nicer label for, so
+   new business types added later never break the UI. */
+const BUSINESS_TYPE_CONFIG = {
+  'car-rentals':          { navLabel:'Bookings',      resourceLabel:'Vehicle',      showPartySize:false },
+  'orthopedic-clinic':    { navLabel:'Appointments',   resourceLabel:'Doctor',       showPartySize:false },
+  'multispecialty-clinic':{ navLabel:'Appointments',   resourceLabel:'Doctor',       showPartySize:false },
+  'auto-detailing':       { navLabel:'Bookings',       resourceLabel:'Service bay',  showPartySize:false },
+  'fine-dining':          { navLabel:'Reservations',   resourceLabel:'Table',        showPartySize:true  },
+  'cafe-quickserve':      { navLabel:'Reservations',   resourceLabel:'Table',        showPartySize:true  },
+  'travel-tours':         { navLabel:'Bookings',       resourceLabel:'Package',      showPartySize:true  },
+};
+const DEFAULT_BUSINESS_CONFIG = { navLabel:'Bookings', resourceLabel:'Item', showPartySize:false };
+
+let bookingConfig = { navLabel:'Bookings', addLabel:'+ New booking', titleNew:'New booking', titleEdit:'Update booking', showPartySize:false };
+let resourceLabel = 'Item';
+
+function modulesFor(){
+  return (currentClient && currentClient.business_config && currentClient.business_config.modules)
+    || { contacts:true, reservations:true };
+}
+function requireEmailFor(){
+  return !!(currentClient && currentClient.business_config && currentClient.business_config.require_email);
+}
+
+/* ============================================================
+   TIMEZONE HELPERS
+   Every business runs on its own IANA timezone (clients.timezone).
+   starts_at/ends_at are stored as true UTC timestamptz — these two
+   helpers are the only place that convert between that and the
+   business's local wall-clock time shown in the UI.
+   ============================================================ */
+function isoToLocalDateTimeParts(iso, timezone){
+  if (!iso) return { date:null, time:null };
+  const d = new Date(iso);
+  const date = d.toLocaleDateString('en-CA', { timeZone: timezone }); // YYYY-MM-DD
+  const time = d.toLocaleTimeString('en-GB', { timeZone: timezone, hour:'2-digit', minute:'2-digit' }); // HH:MM 24h
+  return { date, time };
+}
+/* Milliseconds that `timezone` is ahead of UTC at the given instant. Derived
+   via Intl rather than the browser's own clock, so it stays correct no matter
+   where the staff member is sitting. */
+function tzOffsetMs(date, timezone){
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  }).formatToParts(date).reduce((acc, p) => (acc[p.type] = p.value, acc), {});
+  const asUTC = Date.UTC(
+    Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+    Number(parts.hour) % 24, Number(parts.minute), Number(parts.second)
+  );
+  return asUTC - date.getTime();
+}
+function localDateTimeToISO(dateStr, timeStr, timezone){
+  // Interpret dateStr+timeStr as wall-clock time in `timezone`, return the
+  // correct UTC instant as an ISO string. Reading the offset from the target
+  // zone (not the viewer's) is what keeps 09:00 in Kolkata meaning 03:30Z
+  // even when the browser happens to sit at the same UTC offset.
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  const [hh, mi] = timeStr.split(':').map(Number);
+  const naive = Date.UTC(y, mo - 1, d, hh, mi, 0);
+  let utc = naive - tzOffsetMs(new Date(naive), timezone);
+  // Second pass settles the rare case where the first guess lands on the far
+  // side of a DST transition.
+  utc = naive - tzOffsetMs(new Date(utc), timezone);
+  return new Date(utc).toISOString();
+}
+function formatMoney(amount, currency){
+  if (amount === null || amount === undefined || amount === '') return '—';
+  try { return new Intl.NumberFormat(undefined, { style:'currency', currency: currency || 'INR' }).format(amount); }
+  catch { return `${amount} ${currency||''}`.trim(); }
+}
+function debounce(fn, wait=250){
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(()=>fn(...args), wait); };
+}
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+const loginForm = document.getElementById('loginForm');
+const loginError = document.getElementById('loginError');
+const loginBtn = document.getElementById('loginBtn');
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  loginError.style.display = 'none';
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Signing in…';
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  loginBtn.disabled = false;
+  loginBtn.textContent = 'Sign in';
+
+  if (error) {
+    loginError.textContent = 'Could not sign in. Check the email and password and try again.';
+    loginError.style.display = 'block';
+    return;
+  }
+  session = data.session;
+  await bootApp();
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  session = null; staffMember = null; currentClient = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+});
+
+async function bootApp(){
+  const { data: memberRows, error } = await sb
+    .from('client_members')
+    .select('id, client_id, role, active, clients(id, name, slug, business_type, timezone, currency, business_config)')
+    .eq('user_id', session.user.id)
+    .eq('active', true)
+    .limit(1);
+
+  if (error || !memberRows || memberRows.length === 0 || !memberRows[0].clients) {
+    loginError.textContent = 'This login is not linked to a business yet. Contact your Webnexora rep.';
+    loginError.style.display = 'block';
+    await sb.auth.signOut();
+    return;
+  }
+
+  staffMember = memberRows[0];
+  currentClient = staffMember.clients;
+
+  const cfg = BUSINESS_TYPE_CONFIG[currentClient.business_type] || DEFAULT_BUSINESS_CONFIG;
+  const singular = cfg.navLabel.toLowerCase().replace(/s$/, '');
+  bookingConfig = {
+    navLabel: cfg.navLabel,
+    addLabel: `+ New ${singular}`,
+    titleNew: `New ${singular}`,
+    titleEdit: `Update ${singular}`,
+    showPartySize: cfg.showPartySize
+  };
+
+  /* business_config.booking is the source of truth for the form; the
+     business_type table above only supplies wording fallbacks for tenants
+     seeded before that key existed. */
+  const bcfg = (currentClient.business_config && currentClient.business_config.booking) || {};
+  formType = bcfg.form_type || 'range';
+  askPartySize = (bcfg.ask_party_size !== undefined) ? !!bcfg.ask_party_size : !!cfg.showPartySize;
+  resourceLabel = bcfg.resource_label || cfg.resourceLabel;
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  document.getElementById('bizName').textContent = currentClient.name;
+  document.getElementById('bizSector').textContent = currentClient.business_type || '—';
+  document.getElementById('staffName').textContent = session.user.email || 'Staff';
+  document.getElementById('staffRole').textContent = staffMember.role;
+  document.getElementById('staffInitial').textContent = (session.user.email || 'S').charAt(0).toUpperCase();
+
+  buildNav();
+  currentTab = modulesFor().reservations ? 'reservations' : (modulesFor().contacts ? 'contacts' : 'reservations');
+  await loadData();
+  render();
+}
+
+function buildNav(){
+  const modules = modulesFor();
+  const nav = document.getElementById('navTabs');
+  nav.innerHTML = '';
+  const tabs = [];
+  if (modules.contacts) tabs.push({ id:'contacts', label:'Contacts' });
+  if (modules.reservations) tabs.push({ id:'reservations', label:bookingConfig.navLabel });
+  if (tabs.length === 0) tabs.push({ id:'reservations', label:bookingConfig.navLabel });
+
+  tabs.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-tab' + (t.id === currentTab ? ' active' : '');
+    btn.innerHTML = `<span class="dot"></span>${t.label}`;
+    btn.addEventListener('click', () => { currentTab = t.id; searchTerm=''; document.getElementById('searchInput').value=''; buildNav(); render(); });
+    nav.appendChild(btn);
+  });
+
+  if (staffMember.role === 'owner') {
+    const label = document.createElement('div');
+    label.className = 'nav-label';
+    label.style.marginTop = '18px';
+    label.textContent = 'Owner';
+    nav.appendChild(label);
+
+    const ownerTabs = [
+      { id:'catalogue', label:`${resourceLabel} catalogue` },
+      { id:'metrics', label:'Metrics' }
+    ];
+    ownerTabs.forEach(t => {
+      const btn = document.createElement('button');
+      btn.className = 'nav-tab' + (t.id === currentTab ? ' active' : '');
+      btn.innerHTML = `<span class="dot"></span>${t.label}`;
+      btn.addEventListener('click', () => { currentTab = t.id; buildNav(); render(); });
+      nav.appendChild(btn);
+    });
+  }
+}
+
+/* ============================================================
+   DATA LOADING
+   All reads go through `submissions` (record_type='contact' or
+   'booking'), `customers`, and `bookable_items` — the schema
+   behind booking_schema_migration_v2.sql. Rows are normalized into
+   the same shape the original UI expected (booking_date,
+   booking_time, customer_name, final_amount, ...) so the render
+   functions below stay close to the original design.
+   ============================================================ */
+async function loadData(){
+  const modules = modulesFor();
+
+  if (modules.contacts) {
+    const { data } = await sb
+      .from('submissions')
+      .select('id, status, created_at, custom_fields, customers(name, email, phone)')
+      .eq('client_id', currentClient.id)
+      .eq('record_type', 'contact')
+      .order('created_at', { ascending:false });
+
+    contacts = (data || []).map(s => {
+      const uiStatus = s.status === 'replied' ? 'contacted' : (s.status === 'new' || s.status === 'closed' ? s.status : 'new');
+      return {
+        contact_id: s.id,
+        name: s.customers ? s.customers.name : 'Unknown',
+        email: s.customers ? s.customers.email : null,
+        phone: s.customers ? s.customers.phone : null,
+        message: s.custom_fields ? s.custom_fields.message : null,
+        status: uiStatus,
+        created_at: s.created_at,
+        no_response_flag: uiStatus === 'new' && (Date.now() - new Date(s.created_at).getTime()) > 14*86400000
+      };
+    });
+  }
+
+  if (modules.reservations) {
+    const { data } = await sb
+      .from('submissions')
+      .select('id, status, starts_at, ends_at, quantity, party_size, amount, currency, notes, custom_fields, bookable_item_id, customer_id, customers(name,email,phone), bookable_items!submissions_bookable_item_id_fkey(name)')
+      .eq('client_id', currentClient.id)
+      .eq('record_type', 'booking')
+      .order('starts_at', { ascending:true });
+
+    bookings = (data || []).map(s => {
+      const startParts = isoToLocalDateTimeParts(s.starts_at, currentClient.timezone);
+      return {
+        booking_id: s.id,
+        customer_id: s.customer_id,
+        customer_name: s.customers ? s.customers.name : 'Unknown',
+        phone: s.customers ? s.customers.phone : null,
+        email: s.customers ? s.customers.email : null,
+        resource_name: s.bookable_items ? s.bookable_items.name : null,
+        catalog_item_id: s.bookable_item_id,
+        booking_date: startParts.date,
+        booking_time: startParts.time,
+        starts_at: s.starts_at,
+        ends_at: s.ends_at,
+        party_size: s.party_size,
+        quantity: s.quantity,
+        final_amount: s.amount,
+        currency: s.currency || currentClient.currency,
+        status: s.status,
+        notes: s.notes
+      };
+    });
+  }
+
+  const { data: itemsData } = await sb
+    .from('bookable_items')
+    .select('*')
+    .eq('client_id', currentClient.id)
+    .eq('item_kind', 'pool')
+    .order('sort_order')
+    .order('name');
+  bookableItems = itemsData || [];
+}
+
+/* ============================================================
+   RENDER ROUTER
+   ============================================================ */
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  searchTerm = e.target.value.toLowerCase();
+  render();
+});
+
+function render(){
+  const newBtn = document.getElementById('newBookingBtn');
+  const searchBox = document.querySelector('.search-box');
+  const modules = modulesFor();
+  const showBtn = (currentTab === 'reservations' && modules.reservations);
+  newBtn.style.display = showBtn ? 'inline-flex' : 'none';
+  if (showBtn) newBtn.textContent = bookingConfig.addLabel;
+  searchBox.style.display = (currentTab === 'catalogue' || currentTab === 'metrics') ? 'none' : 'flex';
+
+  if (currentTab === 'contacts') renderContacts();
+  else if (currentTab === 'catalogue') renderCatalogue();
+  else if (currentTab === 'metrics') renderMetrics();
+  else renderReservations();
+}
+document.getElementById('newBookingBtn').addEventListener('click', () => openBookingModal(null));
+
+/* ============================================================
+   CONTACTS VIEW  (submissions where record_type = 'contact')
+   ============================================================ */
+function renderContacts(){
+  document.getElementById('viewTitle').textContent = 'Contacts';
+  const total = contacts.length;
+  const flagged = contacts.filter(c => c.no_response_flag).length;
+  document.getElementById('viewSub').textContent = `${total} total · ${flagged} awaiting response`;
+
+  const filterRow = document.getElementById('filterRow');
+  const filters = [
+    { id:'all', label:'All' },
+    { id:'new', label:'New' },
+    { id:'contacted', label:'Answered' },
+    { id:'no_response', label:'No response 14d+' },
+    { id:'closed', label:'Closed' },
+  ];
+  filterRow.innerHTML = filters.map(f =>
+    `<button class="chip ${contactFilter===f.id?'active':''}" data-f="${f.id}">${f.label}</button>`
+  ).join('');
+  filterRow.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => { contactFilter = chip.dataset.f; renderContacts(); });
+  });
+
+  let list = contacts.filter(c => {
+    if (contactFilter === 'no_response') return c.no_response_flag;
+    if (contactFilter !== 'all') return c.status === contactFilter;
+    return true;
+  });
+  if (searchTerm) {
+    list = list.filter(c => (c.name||'').toLowerCase().includes(searchTerm) || (c.phone||'').includes(searchTerm));
+  }
+
+  const content = document.getElementById('content');
+  if (list.length === 0) {
+    content.innerHTML = emptyState('No contacts here', 'Submissions from your website\'s contact form will show up in this list.');
+    return;
+  }
+
+  content.innerHTML = `<div class="contacts-layout">${list.map(c => contactRowHtml(c)).join('')}</div>`;
+  list.forEach(c => {
+    document.getElementById('row-'+c.contact_id).addEventListener('click', () => openContact(c));
+  });
+}
+
+function contactRowHtml(c){
+  const initial = (c.name||'?').charAt(0).toUpperCase();
+  const preview = (c.message || 'No message provided').slice(0,80);
+  const time = timeAgo(c.created_at);
+  return `
+    <div class="contact-row" id="row-${c.contact_id}">
+      <div class="avatar">${initial}</div>
+      <div class="who">
+        <div class="cname">${escapeHtml(c.name)}</div>
+        <div class="cmsg">${escapeHtml(preview)}</div>
+      </div>
+      <div class="cphone">${escapeHtml(c.phone||'—')}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+        <span class="stamp s-${c.status}">${STATUS_LABELS[c.status]}</span>
+        ${c.no_response_flag ? '<span class="badge-flag">⚠ 14d+</span>' : `<span class="ctime">${time}</span>`}
+      </div>
+    </div>`;
+}
+
+function openContact(c){
+  activeContact = c;
+  document.getElementById('soName').textContent = c.name;
+  const phoneLink = document.getElementById('soPhone');
+  phoneLink.textContent = c.phone || '—';
+  phoneLink.href = c.phone ? `tel:${c.phone}` : '#';
+
+  document.getElementById('soBody').innerHTML = `
+    ${c.email ? detailBlock('Email', `<a href="mailto:${c.email}">${escapeHtml(c.email)}</a>`) : ''}
+    ${detailBlock('Message', escapeHtml(c.message || 'No message provided'))}
+    ${detailBlock('Submitted', formatDateTime(c.created_at))}
+    ${c.no_response_flag ? `<div class="badge-flag" style="margin-top:4px;">⚠ No response in 14+ days</div>` : ''}
+  `;
+
+  const actions = document.getElementById('soActions');
+  const states = ['new','contacted','closed'];
+  actions.innerHTML = states.map(s =>
+    `<button class="btn-chip ${c.status===s?'on':''}" data-s="${s}">${STATUS_LABELS[s]}</button>`
+  ).join('');
+  actions.querySelectorAll('.btn-chip').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await updateContactStatus(c.contact_id, btn.dataset.s);
+    });
+  });
+
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('slideover').classList.add('open');
+}
+
+function closeSlideover(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('slideover').classList.remove('open');
+  activeContact = null;
+}
+document.getElementById('soClose').addEventListener('click', closeSlideover);
+document.getElementById('overlay').addEventListener('click', closeSlideover);
+
+async function updateContactStatus(contact_id, uiStatus){
+  const dbStatus = uiStatus === 'contacted' ? 'replied' : uiStatus; // 'new'/'closed' map 1:1
+  const { error } = await sb
+    .from('submissions')
+    .update({ status: dbStatus })
+    .eq('id', contact_id);
+  if (error) { alert('Could not update status. Please try again.'); return; }
+  closeSlideover();
+  await loadData();
+  renderContacts();
+}
+
+/* ============================================================
+   RESERVATIONS VIEW  (submissions where record_type = 'booking')
+   ============================================================ */
+function renderReservations(){
+  document.getElementById('viewTitle').textContent = bookingConfig.navLabel;
+  const upcoming = bookings.filter(b => b.booking_date && b.booking_date >= todayStr()).length;
+  document.getElementById('viewSub').textContent = `${bookings.length} total · ${upcoming} upcoming`;
+
+  const filterRow = document.getElementById('filterRow');
+  const filters = [
+    { id:'all', label:'All' },
+    { id:'pending', label:'Pending' },
+    { id:'confirmed', label:'Confirmed' },
+    { id:'completed', label:'Completed' },
+    { id:'no_show', label:'No-show' },
+    { id:'cancelled', label:'Cancelled' },
+  ];
+  filterRow.innerHTML = filters.map(f =>
+    `<button class="chip ${bookingFilter===f.id?'active':''}" data-f="${f.id}">${f.label}</button>`
+  ).join('');
+  filterRow.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => { bookingFilter = chip.dataset.f; renderReservations(); });
+  });
+
+  let list = bookings.filter(b => bookingFilter==='all' ? true : b.status===bookingFilter);
+  if (searchTerm) {
+    list = list.filter(b => (b.customer_name||'').toLowerCase().includes(searchTerm) || (b.phone||'').includes(searchTerm));
+  }
+
+  const content = document.getElementById('content');
+  if (list.length === 0) {
+    content.innerHTML = emptyState('No reservations here', 'Bookings submitted through your website will show up grouped by day.');
+    return;
+  }
+
+  const groups = {};
+  list.forEach(b => { const key = b.booking_date || 'Undated'; (groups[key] = groups[key] || []).push(b); });
+  const dates = Object.keys(groups).sort();
+
+  content.innerHTML = dates.map(date => `
+    <div class="day-group">
+      <div class="day-heading">${date === 'Undated' ? 'Undated' : formatDayHeading(date)} <span class="count">${groups[date].length} booking${groups[date].length>1?'s':''}</span></div>
+      <div class="booking-list grid-desktop">
+        ${groups[date].map(b => bookingCardHtml(b)).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  list.forEach(b => {
+    document.getElementById('card-'+b.booking_id).addEventListener('click', () => openBookingModal(b));
+  });
+}
+
+function bookingCardHtml(b){
+  const meta = [b.resource_name, b.party_size ? `Party of ${b.party_size}` : null].filter(Boolean).join(' · ');
+  const priceTag = (b.final_amount != null) ? `<span style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--text-secondary);">${formatMoney(b.final_amount, b.currency)}</span>` : '';
+  return `
+    <div class="booking-card" id="card-${b.booking_id}">
+      <div class="time">${formatTime(b.booking_time)}</div>
+      <div class="info">
+        <div class="cust">${escapeHtml(b.customer_name)}</div>
+        <div class="meta">${escapeHtml(meta)}</div>
+      </div>
+      ${priceTag}
+      <a href="tel:${b.phone}" class="phone-link" onclick="event.stopPropagation()">${escapeHtml(b.phone||'')}</a>
+      <span class="stamp s-${b.status}">${STATUS_LABELS[b.status]||b.status}</span>
+    </div>`;
+}
+
+/* ---- catalogue helpers used by the booking modal ---- */
+function activeCatalogueItems(){
+  return bookableItems.filter(i => i.active !== false);
+}
+
+function populateSpecializationFilter(){
+  const items = activeCatalogueItems();
+  const allSpecs = new Set();
+  items.forEach(i => ((i.attributes && i.attributes.specializations) || []).forEach(s => allSpecs.add(s)));
+  const specField = document.getElementById('specializationField');
+  const specSelect = document.getElementById('editSpecialization');
+  if (allSpecs.size === 0) { specField.style.display = 'none'; return; }
+  specField.style.display = 'block';
+  specSelect.innerHTML = '<option value="">All</option>' +
+    [...allSpecs].sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+}
+
+/* Designation shown beside the name in the picker — specializations if the
+   item has them (doctors), otherwise the item_type (Sedan, Service bay…). */
+function itemDesignation(i){
+  const specs = (i.attributes && i.attributes.specializations) || [];
+  return specs.length ? specs.join(', ') : (i.item_type || '');
+}
+
+/* One item  -> no dropdown, just name it (single-doctor clinic).
+   Many items -> dropdown of name + designation.
+   The count is the rule; nothing to keep in sync when a second doctor joins. */
+function applyResourcePicker(preselectId, specFilter){
+  const select = document.getElementById('editCatalogueItem');
+  const single = document.getElementById('resourceSingle');
+  const wrap = document.getElementById('resourceField');
+  let items = activeCatalogueItems();
+  if (specFilter) items = items.filter(i => ((i.attributes && i.attributes.specializations) || []).includes(specFilter));
+
+  wrap.style.display = items.length ? 'block' : 'none';
+  if (items.length === 0) { select.innerHTML = '<option value="">— None —</option>'; return; }
+
+  const optionsHtml = items.map(i => {
+    const desig = itemDesignation(i);
+    const priceTag = i.base_price != null
+      ? ' — ' + formatMoney(i.base_price, i.currency || currentClient.currency) +
+        (i.attributes && i.attributes.display_unit ? ' ' + i.attributes.display_unit : '')
+      : '';
+    return `<option value="${i.id}" data-requires-party="${!!i.requires_party_size}" ${i.id===preselectId?'selected':''}>` +
+           `${escapeHtml(i.name)}${desig ? ' · ' + escapeHtml(desig) : ''}${priceTag}</option>`;
+  }).join('');
+
+  if (items.length === 1) {
+    select.innerHTML = optionsHtml;
+    select.value = items[0].id;
+    select.style.display = 'none';
+    single.style.display = 'block';
+    single.textContent = items[0].name + (itemDesignation(items[0]) ? ' · ' + itemDesignation(items[0]) : '');
+  } else {
+    // 'range' lets staff log a booking with no item; slots/tiers need one to
+    // know whose calendar to read.
+    const noneOpt = (formType === 'range') ? '<option value="">— None —</option>' : '';
+    select.innerHTML = noneOpt + optionsHtml;
+    if (!preselectId && formType !== 'range') select.value = items[0].id;
+    select.style.display = 'block';
+    single.style.display = 'none';
+  }
+}
+
+function updatePartySizeVisibility(){
+  const select = document.getElementById('editCatalogueItem');
+  const opt = select.selectedOptions[0];
+  const requiresParty = opt && opt.dataset.requiresParty === 'true';
+  const showParty = requiresParty || askPartySize;
+  document.getElementById('partySizeField').style.display = showParty ? 'block' : 'none';
+  // Seats are the unit of capacity for a party booking, so party size *is*
+  // the quantity — showing both would let staff enter two conflicting numbers.
+  document.getElementById('quantityField').style.display = showParty ? 'none' : 'block';
+}
+
+/* How much capacity this booking consumes. For party bookings a table for six
+   takes six seats, so party size drives every availability probe; everywhere
+   else it's the plain quantity field. */
+function effectiveQuantity(){
+  if (askPartySize) {
+    const p = parseInt(document.getElementById('editPartySize').value, 10);
+    return (p && p > 0) ? p : 1;
+  }
+  return parseInt(document.getElementById('editQuantity').value, 10) || 1;
+}
+
+/* ============================================================
+   FORM SHAPE — show only the fields this business's form_type uses
+   ============================================================ */
+function applyFormType(){
+  const isSlots = formType === 'slots';
+  const isTiers = formType === 'duration_tiers';
+  const isRange = formType === 'range';
+
+  // slots: the slot itself carries the time. tiers: the tier carries the end.
+  document.getElementById('startTimeField').style.display = isSlots ? 'none' : 'block';
+  document.getElementById('slotField').style.display      = isSlots ? 'block' : 'none';
+  document.getElementById('tierField').style.display      = isTiers ? 'block' : 'none';
+  document.getElementById('endRow').style.display         = isRange ? 'grid' : 'none';
+  document.getElementById('availabilityNote').style.display = isRange ? 'block' : 'none';
+  document.getElementById('startDateLabel').textContent   = isRange ? 'Start date' : 'Date';
+}
+
+/* Resolve the booking window from whichever control the current form uses. */
+function resolveRange(){
+  const tz = currentClient.timezone;
+  const sd = document.getElementById('editStartDate').value;
+  const st = document.getElementById('editStartTime').value;
+
+  if (formType === 'slots') {
+    return selectedSlot ? { startISO: selectedSlot.slot_start, endISO: selectedSlot.slot_end } : null;
+  }
+  if (formType === 'duration_tiers') {
+    if (!selectedTier || !sd || !st) return null;
+    return { startISO: localDateTimeToISO(sd, st, tz), endISO: selectedTier.ends_at };
+  }
+  const ed = document.getElementById('editEndDate').value;
+  const et = document.getElementById('editEndTime').value;
+  if (!sd || !st || !ed || !et) return null;
+  return { startISO: localDateTimeToISO(sd, st, tz), endISO: localDateTimeToISO(ed, et, tz) };
+}
+
+/* ---- form_type 'slots': server bins the day via get_available_slots ---- */
+async function refreshSlots(){
+  selectedSlot = null;
+  const grid = document.getElementById('slotGrid');
+  const itemId = document.getElementById('editCatalogueItem').value;
+  const date = document.getElementById('editStartDate').value;
+
+  if (!itemId || !date) { grid.innerHTML = '<div class="bf-empty">Pick a date to see available times.</div>'; return; }
+  grid.innerHTML = '<div class="bf-empty">Loading available times…</div>';
+
+  try {
+    const slots = await bookingApi.getAvailableSlots(itemId, date, effectiveQuantity());
+    if (!slots || slots.length === 0) {
+      grid.innerHTML = askPartySize
+        ? `<div class="bf-empty">No table for ${effectiveQuantity()} at this date — try a smaller party or another day.</div>`
+        : '<div class="bf-empty">No available times on this date.</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    slots.forEach(s => {
+      const parts = isoToLocalDateTimeParts(s.slot_start, currentClient.timezone);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'bf-slot-btn';
+      btn.textContent = formatTime(parts.time);
+      if (askPartySize && s.spots_available != null) btn.title = `${s.spots_available} seats free`;
+      btn.addEventListener('click', () => {
+        grid.querySelectorAll('.bf-slot-btn').forEach(b => b.classList.remove('bf-selected'));
+        btn.classList.add('bf-selected');
+        selectedSlot = { slot_start: s.slot_start, slot_end: s.slot_end };
+        recalcAmount();
+      });
+      grid.appendChild(btn);
+    });
+  } catch (e) {
+    grid.innerHTML = `<div class="bf-empty">Could not load times. ${escapeHtml(e.message || '')}</div>`;
+  }
+}
+
+/* ---- form_type 'duration_tiers': 8h / 12h / 24h style packages ---- */
+async function refreshTiers(){
+  selectedTier = null;
+  const grid = document.getElementById('tierGrid');
+  const itemId = document.getElementById('editCatalogueItem').value;
+  const sd = document.getElementById('editStartDate').value;
+  const st = document.getElementById('editStartTime').value;
+
+  if (!itemId || !sd || !st) { grid.innerHTML = '<div class="bf-empty">Pick a date and start time.</div>'; return; }
+
+  const item = bookableItems.find(i => i.id === itemId);
+  const tiers = (item && item.pricing_config && item.pricing_config.duration_tiers) || [];
+  if (tiers.length === 0) { grid.innerHTML = '<div class="bf-empty">No durations configured for this item.</div>'; return; }
+
+  const startISO = localDateTimeToISO(sd, st, currentClient.timezone);
+  grid.innerHTML = '<div class="bf-empty">Checking availability…</div>';
+
+  const results = await Promise.all(tiers.map(async t => {
+    try { return { tier: t, res: await bookingApi.checkDurationTier(itemId, startISO, t.minutes, effectiveQuantity()) }; }
+    catch { return { tier: t, res: null }; }
+  }));
+
+  grid.innerHTML = '';
+  results.forEach(({ tier, res }) => {
+    const available = !!(res && res.available);
+    const price = (res && res.price != null) ? res.price : tier.price;
+    const card = document.createElement('div');
+    card.className = 'bf-tier-card' + (available ? '' : ' bf-unavailable');
+    card.innerHTML =
+      `<span class="bf-tier-label">${escapeHtml(tier.label || (tier.minutes + ' min'))}</span>` +
+      `<span class="bf-tier-price">${formatMoney(price, currentClient.currency)}${available ? '' : ' · unavailable'}</span>`;
+    if (available) {
+      card.addEventListener('click', () => {
+        grid.querySelectorAll('.bf-tier-card').forEach(c => c.classList.remove('bf-selected'));
+        card.classList.add('bf-selected');
+        selectedTier = { minutes: tier.minutes, ends_at: res.ends_at, price };
+        if (price != null) document.getElementById('editAmount').value = price;
+        updateFinalAmountDisplay();
+      });
+    }
+    grid.appendChild(card);
+  });
+}
+
+/* ---- form_type 'range': overlap check on the manual start/end ---- */
+async function refreshRangeAvailability(){
+  const note = document.getElementById('availabilityNote');
+  const itemId = document.getElementById('editCatalogueItem').value;
+  const range = resolveRange();
+  note.className = 'bf-availability';
+  if (!itemId || !range) { note.textContent = ''; return; }
+  if (new Date(range.endISO) <= new Date(range.startISO)) {
+    note.textContent = 'End must be after start.';
+    note.className = 'bf-availability bf-not-ok';
+    return;
+  }
+  note.textContent = 'Checking availability…';
+  try {
+    const ok = await bookingApi.checkRangeAvailability(itemId, range.startISO, range.endISO, effectiveQuantity());
+    note.textContent = ok ? 'Available for these dates.' : 'Not available — overlaps an existing booking.';
+    note.className = 'bf-availability ' + (ok ? 'bf-ok' : 'bf-not-ok');
+  } catch (e) {
+    note.textContent = '';
+  }
+}
+
+/* Re-run whichever availability/price probes this form_type needs. */
+function refreshBookingProbes(){
+  if (formType === 'slots') refreshSlots();
+  else if (formType === 'duration_tiers') refreshTiers();
+  else { refreshRangeAvailability(); recalcAmount(); }
+}
+
+/* ---- live price preview via calculate_booking_price (bookingApi) ---- */
+async function recalcAmount(){
+  const itemId = document.getElementById('editCatalogueItem').value;
+  const quantity = effectiveQuantity();
+  const range = resolveRange();
+
+  if (!itemId || !range) { updateFinalAmountDisplay(); return; }
+  if (new Date(range.endISO) <= new Date(range.startISO)) { updateFinalAmountDisplay(); return; }
+
+  try {
+    const durationMinutes = Math.round((new Date(range.endISO) - new Date(range.startISO)) / 60000);
+    const price = await bookingApi.calculatePrice(itemId, range.startISO, range.endISO, durationMinutes, quantity);
+    if (price != null) document.getElementById('editAmount').value = price;
+  } catch (e) {
+    // No pricing configured for this item/duration — leave amount for staff to enter manually.
+  }
+  updateFinalAmountDisplay();
+}
+
+function updateFinalAmountDisplay(){
+  const amount = parseFloat(document.getElementById('editAmount').value) || 0;
+  document.getElementById('finalAmountDisplay').textContent = formatMoney(amount, currentClient ? currentClient.currency : 'INR');
+}
+
+function openBookingModal(b){
+  editingSubmission = b;
+  document.getElementById('modalError').style.display = 'none';
+  document.getElementById('emailReqMark').style.display = requireEmailFor() ? 'inline' : 'none';
+  document.getElementById('resourceLabelText').textContent = resourceLabel;
+
+  selectedSlot = null;
+  selectedTier = null;
+  document.getElementById('slotGrid').innerHTML = '';
+  document.getElementById('tierGrid').innerHTML = '';
+  document.getElementById('availabilityNote').textContent = '';
+
+  applyFormType();
+  populateSpecializationFilter();
+  document.getElementById('editSpecialization').value = '';
+  applyResourcePicker(b ? b.catalog_item_id : null, null);
+  updatePartySizeVisibility();
+
+  const hasCatalogue = activeCatalogueItems().length > 0;
+  document.getElementById('pricingBlock').style.display = hasCatalogue ? 'block' : 'none';
+
+  if (b) {
+    document.getElementById('modalTitle').textContent = bookingConfig.titleEdit;
+    document.getElementById('modalSub').textContent = 'Editing an existing entry.';
+    document.getElementById('editCustomerName').value = b.customer_name || '';
+    document.getElementById('editPhone').value = b.phone || '';
+    document.getElementById('editEmail').value = b.email || '';
+    document.getElementById('editStartDate').value = b.booking_date || '';
+    document.getElementById('editStartTime').value = b.booking_time || '';
+    const endParts = isoToLocalDateTimeParts(b.ends_at, currentClient.timezone);
+    document.getElementById('editEndDate').value = endParts.date || '';
+    document.getElementById('editEndTime').value = endParts.time || '';
+    document.getElementById('editPartySize').value = b.party_size || '';
+    document.getElementById('editStatus').value = b.status;
+    document.getElementById('editNotes').value = b.notes || '';
+    document.getElementById('editQuantity').value = b.quantity || 1;
+    document.getElementById('editAmount').value = b.final_amount != null ? b.final_amount : '';
+    const canDelete = (staffMember.role === 'owner');
+    document.getElementById('deleteBookingBtn').style.display = canDelete ? 'inline-flex' : 'none';
+    document.getElementById('deleteHint').style.display = canDelete ? 'block' : 'none';
+  } else {
+    document.getElementById('modalTitle').textContent = bookingConfig.titleNew;
+    document.getElementById('modalSub').textContent = 'For a phone-in or walk-in booking.';
+    ['editCustomerName','editPhone','editEmail','editStartDate','editStartTime','editEndDate','editEndTime','editPartySize','editNotes','editAmount']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('editQuantity').value = 1;
+    const today = todayStr();
+    document.getElementById('editStartDate').value = today;
+    document.getElementById('editEndDate').value = today;
+    // Seed a start time so the tier/availability probes have something to
+    // work with the moment the modal opens ('slots' hides this field anyway).
+    document.getElementById('editStartTime').value = '09:00';
+    document.getElementById('editEndTime').value = '09:00';
+    document.getElementById('editStatus').value = 'confirmed';
+    document.getElementById('deleteBookingBtn').style.display = 'none';
+    document.getElementById('deleteHint').style.display = 'none';
+  }
+  updateFinalAmountDisplay();
+  document.getElementById('modalBackdrop').classList.add('open');
+  refreshBookingProbes();
+}
+
+document.getElementById('editSpecialization').addEventListener('change', (e) => {
+  applyResourcePicker(null, e.target.value || null);
+  updatePartySizeVisibility();
+  refreshBookingProbes();
+});
+
+document.getElementById('editCatalogueItem').addEventListener('change', () => {
+  updatePartySizeVisibility();
+  refreshBookingProbes();
+});
+
+// Party size is in this list because it consumes capacity — a table for two
+// and a table for twelve are different availability questions.
+['editStartDate','editStartTime','editEndDate','editEndTime','editQuantity','editPartySize'].forEach(id => {
+  document.getElementById(id).addEventListener('change', debounce(refreshBookingProbes, 250));
+});
+document.getElementById('editAmount').addEventListener('input', updateFinalAmountDisplay);
+
+document.getElementById('modalCancel').addEventListener('click', () => {
+  document.getElementById('modalBackdrop').classList.remove('open');
+  editingSubmission = null;
+});
+
+/* Find an existing customer by email/phone for this client, or create one —
+   mirrors the dedupe logic inside submit_booking_request(), used here
+   because staff-created bookings write directly to submissions/customers
+   (staff already have RLS-granted table access, and need full status
+   freedom the public RPC intentionally restricts on creation). */
+async function findOrCreateCustomer(customer_name, email, phone){
+  let existing = null;
+  if (email) {
+    const { data } = await sb.from('customers').select('id').eq('client_id', currentClient.id).ilike('email', email).limit(1);
+    existing = data && data[0];
+  }
+  if (!existing && phone) {
+    const { data } = await sb.from('customers').select('id').eq('client_id', currentClient.id).eq('phone', phone).limit(1);
+    existing = data && data[0];
+  }
+  if (existing) {
+    await sb.from('customers').update({ name: customer_name }).eq('id', existing.id);
+    return existing.id;
+  }
+  const { data: created, error } = await sb
+    .from('customers')
+    .insert({ client_id: currentClient.id, name: customer_name, email: email || null, phone: phone || null })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return created.id;
+}
+
+document.getElementById('modalSave').addEventListener('click', async () => {
+  const errEl = document.getElementById('modalError');
+  errEl.style.display = 'none';
+
+  const customer_name = document.getElementById('editCustomerName').value.trim();
+  const phone = document.getElementById('editPhone').value.trim();
+  const email = document.getElementById('editEmail').value.trim();
+  const itemId = document.getElementById('editCatalogueItem').value || null;
+  const party_size = document.getElementById('editPartySize').value ? parseInt(document.getElementById('editPartySize').value,10) : null;
+  const status = document.getElementById('editStatus').value;
+  const notes = document.getElementById('editNotes').value.trim();
+  const quantity = effectiveQuantity();
+  const amount = document.getElementById('editAmount').value !== '' ? parseFloat(document.getElementById('editAmount').value) : null;
+
+  if (!customer_name || !phone) {
+    errEl.textContent = 'Customer name and phone are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (requireEmailFor() && !email) {
+    errEl.textContent = 'This business requires an email on file.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (formType !== 'range' && !itemId) {
+    errEl.textContent = `Please choose a ${resourceLabel.toLowerCase()}.`;
+    errEl.style.display = 'block';
+    return;
+  }
+  if (askPartySize && !party_size) {
+    errEl.textContent = 'Party size is required — it decides how many seats to hold.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  /* Resolve the window from whichever control this form_type uses. When
+     editing and staff didn't re-pick a slot/tier, keep the saved times. */
+  let range = resolveRange();
+  if (!range && editingSubmission && editingSubmission.starts_at && editingSubmission.ends_at) {
+    range = { startISO: editingSubmission.starts_at, endISO: editingSubmission.ends_at };
+  }
+  if (!range) {
+    errEl.textContent = formType === 'slots'           ? 'Please choose a time slot.'
+                      : formType === 'duration_tiers'  ? 'Please choose a duration.'
+                      : 'Start and end date/time are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const startISO = range.startISO;
+  const endISO = range.endISO;
+  if (new Date(endISO) <= new Date(startISO)) {
+    errEl.textContent = 'End must be after start.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    if (editingSubmission) {
+      const { error } = await sb.from('submissions').update({
+        bookable_item_id: itemId,
+        starts_at: startISO,
+        ends_at: endISO,
+        party_size,
+        quantity,
+        amount,
+        status,
+        notes: notes || null
+      }).eq('id', editingSubmission.booking_id);
+      if (error) throw error;
+
+      if (editingSubmission.customer_id) {
+        await sb.from('customers').update({
+          name: customer_name, email: email || null, phone: phone || null
+        }).eq('id', editingSubmission.customer_id);
+      }
+    } else {
+      const customerId = await findOrCreateCustomer(customer_name, email || null, phone);
+      const { error } = await sb.from('submissions').insert({
+        client_id: currentClient.id,
+        record_type: 'booking',
+        customer_id: customerId,
+        bookable_item_id: itemId,
+        starts_at: startISO,
+        ends_at: endISO,
+        party_size,
+        quantity,
+        amount,
+        status,
+        notes: notes || null,
+        source: 'staff_console'
+      });
+      if (error) throw error;
+    }
+  } catch (err) {
+    errEl.textContent = 'Could not save. ' + (err.message || 'Please try again — the slot may have just been taken.');
+    errEl.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('modalBackdrop').classList.remove('open');
+  editingSubmission = null;
+  await loadData();
+  renderReservations();
+});
+
+document.getElementById('deleteBookingBtn').addEventListener('click', async () => {
+  if (!editingSubmission) return;
+  const ok = confirm(`Permanently delete this booking for ${editingSubmission.customer_name}? This cannot be undone — if the customer just cancelled, use the Cancelled status instead.`);
+  if (!ok) return;
+  const { error } = await sb.from('submissions').delete().eq('id', editingSubmission.booking_id);
+  if (error) { alert('Could not delete. You may not have permission — only owners/managers can delete bookings.'); return; }
+  document.getElementById('modalBackdrop').classList.remove('open');
+  editingSubmission = null;
+  await loadData();
+  renderReservations();
+});
+
+/* ============================================================
+   CATALOGUE VIEW (owner-only) — CRUD on bookable_items (item_kind='pool')
+   ============================================================ */
+function renderCatalogue(){
+  document.getElementById('viewTitle').textContent = `${resourceLabel} catalogue`;
+  const items = bookableItems;
+  document.getElementById('viewSub').textContent = `${items.length} item${items.length===1?'':'s'} · shown to staff when creating a ${bookingConfig.titleNew.toLowerCase()}`;
+  document.getElementById('filterRow').innerHTML = `<button class="chip active" id="addCatalogueBtn">+ Add item</button>`;
+  document.getElementById('addCatalogueBtn').addEventListener('click', () => openCatalogueModal(null));
+
+  const content = document.getElementById('content');
+  if (items.length === 0) {
+    content.innerHTML = emptyState('No items yet', `Add your first ${resourceLabel.toLowerCase()} so staff can pick it when creating a ${bookingConfig.titleNew.toLowerCase()}.`);
+    return;
+  }
+  content.innerHTML = `<div class="catalogue-list">${items.map(catalogueRowHtml).join('')}</div>`;
+  items.forEach(i => {
+    document.getElementById('cat-row-'+i.id).addEventListener('click', () => openCatalogueModal(i.id));
+  });
+}
+
+function catalogueRowHtml(i){
+  const specs = (i.attributes && i.attributes.specializations) || [];
+  const meta = [i.item_type, specs.length ? specs.join(', ') : null].filter(Boolean).join(' · ');
+  const unit = (i.attributes && i.attributes.display_unit) || '';
+  return `
+    <div class="catalogue-row" id="cat-row-${i.id}">
+      <div>
+        <div class="item-name">${escapeHtml(i.name)}</div>
+        ${meta ? `<div class="item-meta">${escapeHtml(meta)}</div>` : ''}
+      </div>
+      <div class="item-price">${i.base_price != null ? formatMoney(i.base_price, i.currency || currentClient.currency) + ' ' + escapeHtml(unit) : '—'}</div>
+      ${i.active === false ? '<span class="inactive-tag">Inactive</span>' : '<span></span>'}
+      <span style="color:var(--text-muted);">›</span>
+    </div>`;
+}
+
+function openCatalogueModal(itemId){
+  editingCatalogueItemId = itemId;
+  document.getElementById('catModalError').style.display = 'none';
+  document.getElementById('catModalLabel').textContent = `Added to your ${resourceLabel.toLowerCase()} catalogue.`;
+  const item = bookableItems.find(i => i.id === itemId);
+
+  if (item) {
+    document.getElementById('catModalTitle').textContent = `Edit ${resourceLabel.toLowerCase()}`;
+    document.getElementById('catName').value = item.name || '';
+    document.getElementById('catCategory').value = item.item_type || '';
+    document.getElementById('catPrice').value = item.base_price != null ? item.base_price : '';
+    document.getElementById('catUnit').value = (item.attributes && item.attributes.display_unit) || '';
+    document.getElementById('catSpecializations').value = ((item.attributes && item.attributes.specializations) || []).join(', ');
+    document.getElementById('catActive').checked = item.active !== false;
+    document.getElementById('catDeleteBtn').style.display = 'inline-flex';
+  } else {
+    document.getElementById('catModalTitle').textContent = `New ${resourceLabel.toLowerCase()}`;
+    ['catName','catCategory','catPrice','catUnit','catSpecializations'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('catActive').checked = true;
+    document.getElementById('catDeleteBtn').style.display = 'none';
+  }
+  document.getElementById('catalogueModalBackdrop').classList.add('open');
+}
+
+document.getElementById('catModalCancel').addEventListener('click', () => {
+  document.getElementById('catalogueModalBackdrop').classList.remove('open');
+  editingCatalogueItemId = null;
+});
+
+document.getElementById('catModalSave').addEventListener('click', async () => {
+  const errEl = document.getElementById('catModalError');
+  errEl.style.display = 'none';
+  const name = document.getElementById('catName').value.trim();
+  if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = 'block'; return; }
+
+  const payload = {
+    client_id: currentClient.id,
+    item_kind: 'pool',
+    item_type: document.getElementById('catCategory').value.trim() || null,
+    name,
+    base_price: document.getElementById('catPrice').value ? parseFloat(document.getElementById('catPrice').value) : null,
+    currency: currentClient.currency,
+    attributes: {
+      display_unit: document.getElementById('catUnit').value.trim() || null,
+      specializations: document.getElementById('catSpecializations').value.split(',').map(s=>s.trim()).filter(Boolean)
+    },
+    active: document.getElementById('catActive').checked
+  };
+  /* A new item has to match the tenant's form_type — the availability RPC
+     behind each form rejects items in the wrong booking_mode. Slot items also
+     need weekly windows up front, or get_available_slots() has nothing to bin
+     and the picker comes up empty. */
+  if (!editingCatalogueItemId) {
+    if (formType === 'slots') {
+      payload.booking_mode = 'slot_based';
+      payload.duration_minutes = 30;
+      payload.slot_interval_minutes = 30;
+      payload.availability_mode = 'weekly';
+      payload.availability_rules = [1,2,3,4,5,6].map(d => ({ weekday:d, start_time:'09:00', end_time:'17:00' }));
+    } else if (formType === 'duration_tiers') {
+      errEl.textContent = 'This business books by fixed duration packages — add the item and its duration tiers in Supabase.';
+      errEl.style.display = 'block';
+      return;
+    } else {
+      payload.booking_mode = 'range_based';
+    }
+  }
+
+  let error;
+  if (editingCatalogueItemId) {
+    ({ error } = await sb.from('bookable_items').update(payload).eq('id', editingCatalogueItemId));
+  } else {
+    ({ error } = await sb.from('bookable_items').insert(payload));
+  }
+  if (error) { errEl.textContent = 'Could not save. Please try again.'; errEl.style.display = 'block'; return; }
+
+  document.getElementById('catalogueModalBackdrop').classList.remove('open');
+  editingCatalogueItemId = null;
+  await loadData();
+  renderCatalogue();
+});
+
+document.getElementById('catDeleteBtn').addEventListener('click', async () => {
+  if (!editingCatalogueItemId) return;
+  const ok = confirm('Hide this item from new bookings? Existing bookings that used it keep their own saved details and are unaffected — items already referenced by a booking can\'t be permanently deleted.');
+  if (!ok) return;
+  const { error } = await sb.from('bookable_items').update({ active:false }).eq('id', editingCatalogueItemId);
+  if (error) { alert('Could not update. Please try again.'); return; }
+  document.getElementById('catalogueModalBackdrop').classList.remove('open');
+  editingCatalogueItemId = null;
+  await loadData();
+  renderCatalogue();
+});
+
+/* ============================================================
+   METRICS VIEW (owner-only)
+   ============================================================ */
+let metricsChart = null;
+
+function renderMetrics(){
+  document.getElementById('viewTitle').textContent = 'Metrics';
+  document.getElementById('viewSub').textContent = 'This month, based on your bookings.';
+  document.getElementById('filterRow').innerHTML = '';
+
+  const now = new Date();
+  const monthPrefix = now.toISOString().slice(0,7); // YYYY-MM
+  const monthBookings = bookings.filter(b => b.booking_date && b.booking_date.startsWith(monthPrefix));
+
+  const completed = monthBookings.filter(b => b.status === 'completed');
+  const projected = monthBookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
+  const cancelled = monthBookings.filter(b => b.status === 'cancelled' || b.status === 'no_show');
+  const revenue = completed.reduce((sum,b) => sum + (Number(b.final_amount) || 0), 0);
+  const projectedRevenue = projected.reduce((sum,b) => sum + (Number(b.final_amount) || 0), 0);
+  const currency = currentClient.currency;
+
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Total this month</div><div class="stat-value">${monthBookings.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value">${completed.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Cancelled / No-show</div><div class="stat-value">${cancelled.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Revenue earned</div><div class="stat-value positive">${formatMoney(revenue, currency)}</div></div>
+      <div class="stat-card"><div class="stat-label">Projected (upcoming)</div><div class="stat-value">${formatMoney(projectedRevenue, currency)}</div></div>
+    </div>
+    <div class="chart-card">
+      <h4>Bookings per day this month</h4>
+      <canvas id="metricsChartCanvas" height="90"></canvas>
+    </div>
+  `;
+
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const dailyCounts = Array(daysInMonth).fill(0);
+  monthBookings.forEach(b => {
+    const day = parseInt(b.booking_date.slice(8,10),10);
+    if (day >= 1 && day <= daysInMonth) dailyCounts[day-1]++;
+  });
+
+  const ctx = document.getElementById('metricsChartCanvas').getContext('2d');
+  if (metricsChart) metricsChart.destroy();
+  metricsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dailyCounts.map((_,i) => i+1),
+      datasets: [{ data: dailyCounts, backgroundColor: '#2F6FED', borderRadius: 3, maxBarThickness: 22 }]
+    },
+    options: {
+      plugins: { legend: { display:false } },
+      scales: {
+        x: { grid:{display:false}, ticks:{font:{size:10}} },
+        y: { beginAtZero:true, ticks:{precision:0, font:{size:10}}, grid:{color:'#EDF1F7'} }
+      }
+    }
+  });
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function detailBlock(k,v){ return `<div class="detail-block"><div class="k">${k}</div><div class="v">${v}</div></div>`; }
+function emptyState(title, sub){ return `<div class="empty-state"><div class="glyph">···</div><p><strong>${title}</strong><br>${sub}</p></div>`; }
+function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function formatTime(t){ if(!t) return '—'; const [h,m]=t.split(':'); const hh=parseInt(h,10); const ampm=hh>=12?'pm':'am'; const h12=((hh+11)%12)+1; return `${h12}:${m} ${ampm}`; }
+function formatDateTime(iso){ const d=new Date(iso); return d.toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function formatDayHeading(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((d-today)/86400000);
+  const label = d.toLocaleDateString('en-IN',{weekday:'long', day:'numeric', month:'short'});
+  if (diff===0) return `Today · ${label}`;
+  if (diff===1) return `Tomorrow · ${label}`;
+  if (diff===-1) return `Yesterday · ${label}`;
+  return label;
+}
+function timeAgo(iso){
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff/60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins/60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs/24);
+  return `${days}d ago`;
+}
+
+/* ============================================================
+   RESTORE SESSION ON RELOAD
+   ============================================================ */
+(async function init(){
+  const { data } = await sb.auth.getSession();
+  if (data.session) {
+    session = data.session;
+    await bootApp();
+  }
+})();
+
+})();
+</script>
+</body>
+</html>
